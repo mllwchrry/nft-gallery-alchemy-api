@@ -1,113 +1,105 @@
-import Image from 'next/image'
+"use client";
 
-export default function Home() {
+import { useEffect, useMemo, useState } from 'react'
+import {NFTCard} from "./components/nftCard"
+
+const Home = () => {
+  const [wallet, setWalletAddress] = useState("");
+  const [collection, setCollectionAddress] = useState("");
+  const [NFTs, setNFTs] = useState([])
+  const [fetchForCollection, setFetchForCollection] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageKeys, setPageKeys] = useState(['0'])
+  const [areMorePages, setAreMorePages] = useState(true)
+  const pageSize = 18
+  
+
+  const fetchNFTs = async() => {
+    let nfts; 
+    const api_key = "A8A1Oo_UTB9IN5oNHfAc2tAxdR4UVwfM"
+    const baseURL = `https://eth-mainnet.alchemyapi.io/v2/${api_key}/getNFTs/`;
+
+    if (!collection.length) {
+      var requestOptions = {
+        method: 'GET'
+      };
+     
+      const fetchURL = `${baseURL}?owner=${wallet}&pageSize=${pageSize}&pageKey=${pageKeys[currentPage - 1]}`;
+  
+      nfts = await fetch(fetchURL, requestOptions).then(data => data.json())
+    } else {
+      const fetchURL = `${baseURL}?owner=${wallet}&contractAddresses%5B%5D=${collection}&pageSize=${pageSize}&pageKey=${pageKeys[currentPage - 1]}`;
+      nfts= await fetch(fetchURL, requestOptions).then(data => data.json())
+    }
+
+    if (nfts) {
+      console.log("nfts:", nfts)
+      setNFTs(nfts.ownedNfts)
+      if (!pageKeys.includes(nfts.pageKey))
+        setPageKeys([...pageKeys, nfts.pageKey])
+      
+      setAreMorePages(nfts.pageKey)
+    }
+  }
+
+
+  const fetchNFTsForCollection = async () => {
+    if (collection.length) {
+      var requestOptions = {
+        method: 'GET'
+      };
+      const api_key = "A8A1Oo_UTB9IN5oNHfAc2tAxdR4UVwfM"
+      const baseURL = `https://eth-mainnet.alchemyapi.io/v2/${api_key}/getNFTsForCollection/`;
+      const fetchURL = `${baseURL}?contractAddress=${collection}&withMetadata=${"true"}&pageSize=${pageSize}&pageKey=${pageKeys[currentPage - 1]}`;
+      const nfts = await fetch(fetchURL, requestOptions).then(data => data.json())
+      if (nfts) {
+        setNFTs(nfts.nfts)
+        if (!pageKeys.includes(nfts.pageKey))
+          setPageKeys([...pageKeys, nfts.pageKey])
+
+        setAreMorePages(nfts.pageKey)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (fetchForCollection) {
+      fetchNFTsForCollection()
+    } else fetchNFTs()
+    window.scrollTo(0, 0);
+  }, [currentPage])
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+    <div className="flex flex-col items-center justify-center py-8 gap-y-3">
+      <div className="flex flex-col w-full justify-center items-center gap-y-2">
+        <input disabled={fetchForCollection}  className="w-2/5 bg-slate-100 py-2 px-2 rounded-lg text-gray-800 focus:outline-red-300 disabled:bg-slate-50 disabled:text-gray-50" onChange={(e)=>{setWalletAddress(e.target.value); setCurrentPage(1)}} value={wallet} type={"text"} placeholder="Add your wallet address"></input>
+        <input className="w-2/5 bg-slate-100 py-2 px-2 rounded-lg text-gray-800 focus:outline-red-300 disabled:bg-slate-50 disabled:text-gray-50" onChange={(e)=>{setCollectionAddress(e.target.value); setCurrentPage(1)}} value={collection} type={"text"} placeholder="Add the collection address"></input>
+        <label className="text-gray-600 "><input onChange={(e)=>{setFetchForCollection(e.target.checked)}} type={"checkbox"} className="mr-2"></input>Fetch for collection</label>
+        <button className={"disabled:bg-red-500 text-white bg-red-400 px-4 py-2 mt-3 rounded-sm w-1/5"} onClick={
+          () => {
+            setCurrentPage(1)
+            if (fetchForCollection) {
+              fetchNFTsForCollection()
+            } else fetchNFTs()
+          }
+        }>Let's go! </button>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
+      <div className='flex flex-wrap gap-y-12 mt-4 w-5/6 gap-x-2 justify-center'>
+        {
+          NFTs.length ? NFTs.map(nft => {
+            return (
+              <NFTCard nft={nft}></NFTCard>
+            )
+          }) : '...'
+        }
       </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+      <div className={`flex gap-5 items-center mt-8 ${NFTs.length ? 'flex' : 'hidden'}`}>
+        <button className={`text-white bg-red-500 p-3 rounded-full ${currentPage == 1 ? 'hidden' : 'block'}`}><img src='/next.png' alt='next page' className='w-5 rotate-180' onClick={() => setCurrentPage(currentPage - 1)}/></button>
+        <p className={`text-gray-600 text-lg ${areMorePages ? 'block' : 'hidden'}`}>{ currentPage }</p>
+        <button className={`text-white bg-red-500 p-3 rounded-full ${areMorePages ? 'block' : 'hidden'}`}><img src='/next.png' alt='next page' className='w-5' onClick={() => setCurrentPage(currentPage + 1)}/></button>
       </div>
-    </main>
+    </div>
   )
 }
+
+export default Home
